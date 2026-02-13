@@ -169,6 +169,19 @@
     }
   }
 
+  // Stat service domains whose images are rendered server-side by GitHub
+  // and frequently rate-limit / return error SVGs in browser previews.
+  const STAT_SERVICE_HOSTS = [
+    "github-readme-stats",
+    "streak-stats",
+    "github-profile-trophy",
+    "github-readme-activity-graph",
+  ];
+
+  function isStatServiceImg(src) {
+    return STAT_SERVICE_HOSTS.some((h) => src.includes(h));
+  }
+
   function renderReadme(markdown) {
     // Preview (rendered HTML)
     if (typeof marked !== "undefined") {
@@ -178,23 +191,20 @@
       });
       readmePreview.innerHTML = marked.parse(markdown);
 
-      // Add error handling for stat/trophy images that may fail due to rate limits
+      // Stat service images are rendered server-side by GitHub and often
+      // return rate-limit error SVGs or blank content when loaded directly
+      // in a browser.  Replace them with styled preview placeholders.
       readmePreview.querySelectorAll("img").forEach((img) => {
         const src = img.src || "";
-        const isStatImage =
-          src.includes("github-readme-stats") ||
-          src.includes("streak-stats") ||
-          src.includes("github-profile-trophy") ||
-          src.includes("github-readme-activity-graph") ||
-          src.includes("capsule-render");
-        if (isStatImage) {
-          img.onerror = function () {
-            const placeholder = document.createElement("div");
-            placeholder.className = "stat-img-fallback";
-            placeholder.textContent =
-              "⚠ " + (img.alt || "Stats image") + " — may not load in preview. Works on GitHub.";
-            img.replaceWith(placeholder);
-          };
+        if (isStatServiceImg(src)) {
+          const placeholder = document.createElement("div");
+          placeholder.className = "stat-img-placeholder";
+          const label = img.alt || "Stats card";
+          placeholder.innerHTML =
+            '<span class="stat-img-icon">📊</span>' +
+            '<span class="stat-img-label">' + escapeHTML(label) + '</span>' +
+            '<span class="stat-img-note">Renders on GitHub — copy the markdown to use it</span>';
+          img.replaceWith(placeholder);
         }
       });
     } else {
