@@ -113,6 +113,119 @@ const ReadmeGenerator = (() => {
   }
 
   /**
+   * Create a shields.io static badge URL.
+   * Shields format: /badge/LABEL-MESSAGE-COLOR
+   * Dashes in label/message must be doubled (--), spaces become underscores.
+   */
+  function staticBadge(label, value, color, opts) {
+    const esc = (s) => String(s).replace(/-/g, "--").replace(/_/g, "__").replace(/ /g, "_");
+    let url = `https://img.shields.io/badge/${esc(label)}-${esc(value)}-${color}?style=for-the-badge`;
+    if (opts && opts.logo) url += `&logo=${opts.logo}&logoColor=white`;
+    return url;
+  }
+
+  /**
+   * Compute extra stats from repos array.
+   */
+  function computeExtraStats(repos) {
+    let totalForks = 0;
+    let totalIssues = 0;
+    let originalRepos = 0;
+    for (const r of repos) {
+      totalForks += r.forks_count || 0;
+      totalIssues += r.open_issues_count || 0;
+      if (!r.fork) originalRepos++;
+    }
+    return { totalForks, totalIssues, originalRepos };
+  }
+
+  /**
+   * Determine trophy tier for a numeric value.
+   */
+  function trophyTier(value, thresholds) {
+    for (let i = thresholds.length - 1; i >= 0; i--) {
+      if (value >= thresholds[i].min) return thresholds[i];
+    }
+    return null;
+  }
+
+  /**
+   * Generate achievement trophies based on actual user stats.
+   */
+  function generateTrophies(data) {
+    const { user, repos, languages, totalStars } = data;
+    const extra = computeExtraStats(repos);
+    const trophies = [];
+
+    // Star trophies
+    const starTier = trophyTier(totalStars, [
+      { min: 1,    label: "Star Gazer",     icon: "⭐", color: "C0C0C0" },
+      { min: 10,   label: "Star Collector",  icon: "⭐", color: "FFD700" },
+      { min: 50,   label: "Star Magnet",     icon: "🌟", color: "FF8C00" },
+      { min: 100,  label: "Star Master",     icon: "🌟", color: "FF4500" },
+      { min: 500,  label: "Superstar",       icon: "💫", color: "FF0000" },
+      { min: 1000, label: "Star Legend",      icon: "💫", color: "8B0000" },
+    ]);
+    if (starTier) trophies.push({ ...starTier, value: `${totalStars} Stars` });
+
+    // Repo trophies
+    const repoTier = trophyTier(extra.originalRepos, [
+      { min: 1,   label: "First Repo",       icon: "📦", color: "C0C0C0" },
+      { min: 5,   label: "Creator",           icon: "📦", color: "4169E1" },
+      { min: 10,  label: "Repository Pro",    icon: "📁", color: "3fb950" },
+      { min: 30,  label: "Prolific Coder",    icon: "📁", color: "228B22" },
+      { min: 50,  label: "Repo Machine",      icon: "🗂️", color: "006400" },
+      { min: 100, label: "Repo Legend",        icon: "🗂️", color: "004d00" },
+    ]);
+    if (repoTier) trophies.push({ ...repoTier, value: `${extra.originalRepos} Repos` });
+
+    // Follower trophies
+    const followerTier = trophyTier(user.followers, [
+      { min: 1,    label: "Friendly Face",    icon: "👥", color: "C0C0C0" },
+      { min: 10,   label: "Networker",         icon: "👥", color: "9370DB" },
+      { min: 50,   label: "Influencer",        icon: "🌐", color: "8A2BE2" },
+      { min: 100,  label: "Community Star",    icon: "🌐", color: "7B1FA2" },
+      { min: 500,  label: "Thought Leader",    icon: "🏛️", color: "6A0DAD" },
+      { min: 1000, label: "GitHub Celebrity",   icon: "🏛️", color: "4a0080" },
+    ]);
+    if (followerTier) trophies.push({ ...followerTier, value: `${user.followers} Followers` });
+
+    // Language trophies
+    const langCount = languages.length;
+    const langTier = trophyTier(langCount, [
+      { min: 1,  label: "Coder",             icon: "💻", color: "C0C0C0" },
+      { min: 3,  label: "Multilingual",       icon: "💻", color: "1E90FF" },
+      { min: 5,  label: "Polyglot",           icon: "🔤", color: "0077B6" },
+      { min: 8,  label: "Language Master",    icon: "🔤", color: "005f8a" },
+      { min: 12, label: "Language Legend",      icon: "🗣️", color: "003f5c" },
+    ]);
+    if (langTier) trophies.push({ ...langTier, value: `${langCount} Languages` });
+
+    // Fork trophies
+    const forkTier = trophyTier(extra.totalForks, [
+      { min: 1,   label: "Forked",            icon: "🍴", color: "C0C0C0" },
+      { min: 10,  label: "Popular Code",       icon: "🍴", color: "D29922" },
+      { min: 50,  label: "Fork Magnet",        icon: "🔱", color: "FF8C00" },
+      { min: 100, label: "Fork Master",        icon: "🔱", color: "FF4500" },
+    ]);
+    if (forkTier) trophies.push({ ...forkTier, value: `${extra.totalForks} Forks` });
+
+    // Account age trophy
+    const createdYear = new Date(user.created_at).getFullYear();
+    const yearsActive = new Date().getFullYear() - createdYear;
+    const ageTier = trophyTier(yearsActive, [
+      { min: 1,  label: "GitHub Member",      icon: "📅", color: "C0C0C0" },
+      { min: 2,  label: "Dedicated",           icon: "📅", color: "20B2AA" },
+      { min: 5,  label: "Veteran",             icon: "🎖️", color: "2E8B57" },
+      { min: 8,  label: "OG Developer",        icon: "🎖️", color: "006400" },
+      { min: 10, label: "GitHub Pioneer",       icon: "🏅", color: "8B4513" },
+    ]);
+    if (ageTier) trophies.push({ ...ageTier, value: `Since ${createdYear}` });
+
+    return trophies;
+  }
+
+  /**
    * Generate complete README markdown from fetched data.
    */
   function generate(data) {
@@ -220,7 +333,8 @@ const ReadmeGenerator = (() => {
       lines.push(``);
     }
 
-    // ---- GitHub Stats ----
+    // ---- GitHub Stats (native badges — always loads) ----
+    const extra = computeExtraStats(repos);
     lines.push(`---`);
     lines.push(``);
     lines.push(`## 📊 GitHub Stats`);
@@ -228,16 +342,30 @@ const ReadmeGenerator = (() => {
     lines.push(`<div align="center">`);
     lines.push(``);
     lines.push(
-      `<img src="https://github-readme-stats.vercel.app/api?username=${username}&show_icons=true&theme=github_dark&hide_border=true&count_private=true&cache_seconds=7200" alt="GitHub Stats" height="170" />`
-    );
-    lines.push(
-      `<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=${username}&layout=compact&theme=github_dark&hide_border=true&cache_seconds=7200" alt="Top Languages" height="170" />`
+      `![](${staticBadge("Total Stars", totalStars, "58a6ff", { logo: "github" })}) ` +
+      `![](${staticBadge("Repositories", extra.originalRepos, "3fb950", { logo: "bookmarks" })}) ` +
+      `![](${staticBadge("Followers", user.followers, "bc8cff", { logo: "people" })}) ` +
+      `![](${staticBadge("Forks", extra.totalForks, "d29922", { logo: "git" })})`
     );
     lines.push(``);
     lines.push(`</div>`);
     lines.push(``);
 
-    // ---- Streak Stats ----
+    // ---- Top Languages breakdown ----
+    const topLangs = languages.slice(0, 8);
+    if (topLangs.length) {
+      lines.push(`<div align="center">`);
+      lines.push(``);
+      lines.push(topLangs.map((l) => {
+        const c = (LANG_COLORS[l.name] || "#8b949e").replace("#", "");
+        return `![](${staticBadge(l.name, l.pct + "%", c)})`;
+      }).join(" "));
+      lines.push(``);
+      lines.push(`</div>`);
+      lines.push(``);
+    }
+
+    // ---- Streak Stats (demolab.com — works reliably) ----
     lines.push(`<div align="center">`);
     lines.push(``);
     lines.push(
@@ -247,29 +375,22 @@ const ReadmeGenerator = (() => {
     lines.push(`</div>`);
     lines.push(``);
 
-    // ---- Activity Graph ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 📈 Contribution Graph`);
-    lines.push(``);
-    lines.push(
-      `<img src="https://github-readme-activity-graph.vercel.app/graph?username=${username}&theme=github-compact&hide_border=true&area=true" width="100%" alt="Activity Graph" />`
-    );
-    lines.push(``);
-
-    // ---- Trophies ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 🏆 GitHub Trophies`);
-    lines.push(``);
-    lines.push(`<div align="center">`);
-    lines.push(``);
-    lines.push(
-      `<img src="https://github-profile-trophy.vercel.app/?username=${username}&theme=darkhub&no-frame=true&margin-w=10&column=7" alt="Trophies" />`
-    );
-    lines.push(``);
-    lines.push(`</div>`);
-    lines.push(``);
+    // ---- Trophies (native achievement badges — always loads) ----
+    const trophies = generateTrophies(data);
+    if (trophies.length) {
+      lines.push(`---`);
+      lines.push(``);
+      lines.push(`## 🏆 GitHub Trophies`);
+      lines.push(``);
+      lines.push(`<div align="center">`);
+      lines.push(``);
+      lines.push(trophies.map((t) =>
+        `![](${staticBadge(t.icon + " " + t.label, t.value, t.color)})`
+      ).join(" "));
+      lines.push(``);
+      lines.push(`</div>`);
+      lines.push(``);
+    };
 
     // ---- Connect ----
     lines.push(`---`);
