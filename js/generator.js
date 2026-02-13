@@ -228,10 +228,10 @@ const ReadmeGenerator = (() => {
     lines.push(`<div align="center">`);
     lines.push(``);
     lines.push(
-      `<img src="https://github-readme-stats.vercel.app/api?username=${username}&show_icons=true&theme=github_dark&hide_border=true&count_private=true" alt="GitHub Stats" height="170" />`
+      `<img src="https://github-readme-stats.vercel.app/api?username=${username}&show_icons=true&theme=github_dark&hide_border=true&count_private=true&cache_seconds=7200" alt="GitHub Stats" height="170" />`
     );
     lines.push(
-      `<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=${username}&layout=compact&theme=github_dark&hide_border=true" alt="Top Languages" height="170" />`
+      `<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=${username}&layout=compact&theme=github_dark&hide_border=true&cache_seconds=7200" alt="Top Languages" height="170" />`
     );
     lines.push(``);
     lines.push(`</div>`);
@@ -241,7 +241,7 @@ const ReadmeGenerator = (() => {
     lines.push(`<div align="center">`);
     lines.push(``);
     lines.push(
-      `<img src="https://github-readme-streak-stats.herokuapp.com/?user=${username}&theme=github-dark-blue&hide_border=true" alt="GitHub Streak" />`
+      `<img src="https://streak-stats.demolab.com/?user=${username}&theme=github-dark-blue&hide_border=true" alt="GitHub Streak" />`
     );
     lines.push(``);
     lines.push(`</div>`);

@@ -177,6 +177,26 @@
         gfm: true,
       });
       readmePreview.innerHTML = marked.parse(markdown);
+
+      // Add error handling for stat/trophy images that may fail due to rate limits
+      readmePreview.querySelectorAll("img").forEach((img) => {
+        const src = img.src || "";
+        const isStatImage =
+          src.includes("github-readme-stats") ||
+          src.includes("streak-stats") ||
+          src.includes("github-profile-trophy") ||
+          src.includes("github-readme-activity-graph") ||
+          src.includes("capsule-render");
+        if (isStatImage) {
+          img.onerror = function () {
+            const placeholder = document.createElement("div");
+            placeholder.className = "stat-img-fallback";
+            placeholder.textContent =
+              "⚠ " + (img.alt || "Stats image") + " — may not load in preview. Works on GitHub.";
+            img.replaceWith(placeholder);
+          };
+        }
+      });
     } else {
       readmePreview.textContent = markdown;
     }
