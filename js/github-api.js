@@ -11,12 +11,17 @@ const GitHubAPI = (() => {
    * Fetch JSON from GitHub API with basic error handling.
    */
   async function fetchJSON(url) {
-    const res = await fetch(url, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-    });
-    if (res.status === 404) throw new Error("User not found. Check the username and try again.");
-    if (res.status === 403) throw new Error("GitHub API rate limit exceeded. Wait a minute and try again.");
-    if (!res.ok) throw new Error(`GitHub API error (${res.status})`);
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+      });
+    } catch {
+      throw new Error("Network error. Please check your internet connection and try again.");
+    }
+    if (res.status === 404) throw new Error("GitHub user not found. Please check the username and try again.");
+    if (res.status === 403) throw new Error("GitHub API rate limit exceeded. Please wait a minute and try again.");
+    if (!res.ok) throw new Error(`GitHub API error (${res.status}). Please try again later.`);
     return res.json();
   }
 

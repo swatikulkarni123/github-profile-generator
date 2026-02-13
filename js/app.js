@@ -42,10 +42,18 @@
 
   let currentMarkdown = "";
 
+  // ---- Auto-focus input on page load ----
+  usernameInput.focus();
+
   // ---- Event listeners ----
   generateBtn.addEventListener("click", handleGenerate);
   usernameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleGenerate();
+  });
+  // Clear error state when user starts typing
+  usernameInput.addEventListener("input", () => {
+    hideError();
+    usernameInput.closest(".input-wrapper").classList.remove("input-error");
   });
   copyBtn.addEventListener("click", handleCopy);
   downloadBtn.addEventListener("click", handleDownload);
@@ -63,13 +71,13 @@
   async function handleGenerate() {
     const username = usernameInput.value.trim();
     if (!username) {
-      showError("Please enter a GitHub username.");
+      showError("Please enter a GitHub username to generate a profile README.");
       return;
     }
 
     // Basic validation
     if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/.test(username)) {
-      showError("Invalid GitHub username format.");
+      showError('Invalid username "' + username + '". GitHub usernames can only contain letters, numbers, and hyphens.');
       return;
     }
 
@@ -218,12 +226,18 @@
   }
 
   function showError(msg) {
-    errorMsg.textContent = msg;
+    errorMsg.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+      '<span>' + escapeHTML(msg) + '</span>';
     errorMsg.hidden = false;
+    usernameInput.closest(".input-wrapper").classList.add("input-error");
+    usernameInput.focus();
+    usernameInput.select();
   }
 
   function hideError() {
     errorMsg.hidden = true;
+    usernameInput.closest(".input-wrapper").classList.remove("input-error");
   }
 
   function formatNumber(n) {
