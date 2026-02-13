@@ -46,14 +46,18 @@
 
 **[https://swatikulkarni123.github.io/github-profile-generator/](https://swatikulkarni123.github.io/github-profile-generator/)**
 
-The input field opens automatically — just type a GitHub username and press Enter.
+The input field auto-focuses on load — just type a GitHub username and press Enter.
 
-### Enable GitHub Pages (one-time setup)
+> **First-time setup required** — see [Deploy to GitHub Pages](#deploy-to-github-pages) below to activate the live link.
 
-1. Go to your repo: **Settings > Pages**
-2. Under **Source**, select **Deploy from a branch**
-3. Pick **main** branch, **/ (root)** folder, click **Save**
-4. Wait ~1 minute — your site is live at the URL above
+### Deploy to GitHub Pages
+
+1. Go to your repo on GitHub
+2. If the code is on a feature branch, **merge it to `main`** first (open a Pull Request and merge)
+3. Go to **Settings > Pages**
+4. Under **Source**, select **Deploy from a branch**
+5. Pick **`main`** branch, **`/ (root)`** folder, click **Save**
+6. Wait ~2 minutes — your site is live at the URL above
 
 ---
 
