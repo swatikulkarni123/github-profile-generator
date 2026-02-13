@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Profile README Generator</title>
+  <meta name="description" content="Generate a professional GitHub profile README instantly from any GitHub username. Free, no login required." />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+        </svg>
+        <span>Profile README Generator</span>
+      </div>
+      <a href="https://github.com" target="_blank" rel="noopener" class="header-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero">
+      <h1>GitHub Profile README Generator</h1>
+      <p class="subtitle">Enter a GitHub username. Get a professional profile README in seconds.</p>
+
+      <div class="search-box">
+        <div class="input-wrapper">
+          <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input
+            type="text"
+            id="username-input"
+            placeholder="Enter GitHub username (e.g. torvalds)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="generate-btn" type="button">
+            <span class="btn-text">Generate README</span>
+            <span class="btn-loader" hidden>
+              <svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93 2.83-2.83m8.48-8.48 2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83"/></svg>
+            </span>
+          </button>
+        </div>
+        <div id="error-msg" class="error-msg" hidden></div>
+      </div>
+    </section>
+
+    <!-- Results (hidden until generated) -->
+    <section id="results" class="results" hidden>
+
+      <!-- User Profile Card -->
+      <div class="profile-card" id="profile-card">
+        <img id="avatar" class="avatar" src="" alt="" />
+        <div class="profile-info">
+          <h2 id="profile-name"></h2>
+          <p id="profile-bio" class="profile-bio"></p>
+          <div class="profile-stats">
+            <div class="stat"><span id="stat-repos" class="stat-value">0</span><span class="stat-label">Repos</span></div>
+            <div class="stat"><span id="stat-stars" class="stat-value">0</span><span class="stat-label">Stars</span></div>
+            <div class="stat"><span id="stat-followers" class="stat-value">0</span><span class="stat-label">Followers</span></div>
+            <div class="stat"><span id="stat-following" class="stat-value">0</span><span class="stat-label">Following</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Languages Chart -->
+      <div class="section-card">
+        <h3>Top Languages</h3>
+        <div id="languages-chart" class="languages-chart"></div>
+      </div>
+
+      <!-- Top Repos -->
+      <div class="section-card">
+        <h3>Top Repositories</h3>
+        <div id="top-repos" class="top-repos"></div>
+      </div>
+
+      <!-- README Preview -->
+      <div class="section-card readme-section">
+        <div class="readme-header">
+          <h3>Generated README.md</h3>
+          <div class="readme-actions">
+            <button id="copy-btn" class="action-btn" title="Copy markdown">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+            <button id="download-btn" class="action-btn action-btn-primary" title="Download README.md">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download README.md</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs: Preview / Raw Markdown -->
+        <div class="tabs">
+          <button class="tab active" data-tab="preview">Preview</button>
+          <button class="tab" data-tab="raw">Raw Markdown</button>
+        </div>
+        <div id="tab-preview" class="tab-content active">
+          <div id="readme-preview" class="readme-preview"></div>
+        </div>
+        <div id="tab-raw" class="tab-content">
+          <pre id="readme-raw" class="readme-raw"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Built with vanilla HTML, CSS & JS &mdash; No frameworks, no paid APIs.</p>
+    <p>Uses <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub Public API</a> &bull; Free & open source</p>
+  </footer>
+
+  <!-- Markdown rendering (lightweight, from CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script src="js/github-api.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
