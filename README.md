@@ -2,6 +2,14 @@
 
 > Generate a professional GitHub profile README in seconds — just enter a username.
 
+<div align="center">
+
+### [>> Try It Live <<](https://swatikulkarni123.github.io/github-profile-generator/)
+
+**Click above to open the app — enter any GitHub username and get a full profile README instantly.**
+
+</div>
+
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
@@ -36,14 +44,16 @@
 
 ## Live Demo
 
-Open `index.html` in your browser — no server needed.
+**[https://swatikulkarni123.github.io/github-profile-generator/](https://swatikulkarni123.github.io/github-profile-generator/)**
 
-Or deploy free to **GitHub Pages**:
+The input field opens automatically — just type a GitHub username and press Enter.
 
-1. Push this repo to GitHub
-2. Go to **Settings > Pages**
-3. Set source to **main** branch, root folder
-4. Your site is live at `https://yourusername.github.io/github-profile-generator-ai/`
+### Enable GitHub Pages (one-time setup)
+
+1. Go to your repo: **Settings > Pages**
+2. Under **Source**, select **Deploy from a branch**
+3. Pick **main** branch, **/ (root)** folder, click **Save**
+4. Wait ~1 minute — your site is live at the URL above
 
 ---
 
@@ -51,8 +61,8 @@ Or deploy free to **GitHub Pages**:
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/github-profile-generator-ai.git
-cd github-profile-generator-ai
+git clone https://github.com/swatikulkarni123/github-profile-generator.git
+cd github-profile-generator
 
 # Open in browser — that's it
 open index.html
