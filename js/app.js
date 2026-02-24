@@ -1,6 +1,7 @@
 /**
  * Main application controller.
  * Wires up UI events, orchestrates API calls and README generation.
+ * Handles style switching and drag-and-drop section reordering.
  */
 
 (function () {
@@ -40,7 +41,18 @@
     raw: document.getElementById("tab-raw"),
   };
 
+  // Style selector
+  const styleOptions = document.getElementById("style-options");
+  const styleBtns = styleOptions.querySelectorAll(".style-btn");
+
+  // Section reorder
+  const sectionList = document.getElementById("section-list");
+
+  // ---- State ----
   let currentMarkdown = "";
+  let currentData = null;
+  let currentStyle = "classic";
+  let sectionOrder = [...ReadmeGenerator.DEFAULT_ORDER];
 
   // ---- Auto-focus input on page load ----
   usernameInput.focus();
@@ -50,7 +62,6 @@
   usernameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleGenerate();
   });
-  // Clear error state when user starts typing
   usernameInput.addEventListener("input", () => {
     hideError();
     usernameInput.closest(".input-wrapper").classList.remove("input-error");
@@ -67,6 +78,101 @@
     });
   });
 
+  // ---- Style selector ----
+  styleBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      styleBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentStyle = btn.dataset.style;
+      if (currentData) regenerate();
+    });
+  });
+
+  // ---- Drag & Drop section reorder ----
+  let dragItem = null;
+
+  sectionList.addEventListener("dragstart", (e) => {
+    dragItem = e.target.closest(".section-item");
+    if (!dragItem) return;
+    dragItem.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  sectionList.addEventListener("dragend", () => {
+    if (dragItem) dragItem.classList.remove("dragging");
+    sectionList.querySelectorAll(".section-item").forEach((el) => el.classList.remove("drag-over"));
+    dragItem = null;
+    // Update section order from DOM
+    updateSectionOrder();
+    if (currentData) regenerate();
+  });
+
+  sectionList.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const target = e.target.closest(".section-item");
+    if (!target || target === dragItem) return;
+    // Clear all drag-over states
+    sectionList.querySelectorAll(".section-item").forEach((el) => el.classList.remove("drag-over"));
+    target.classList.add("drag-over");
+    // Reorder in DOM
+    const items = [...sectionList.children];
+    const dragIdx = items.indexOf(dragItem);
+    const targetIdx = items.indexOf(target);
+    if (dragIdx < targetIdx) {
+      target.after(dragItem);
+    } else {
+      target.before(dragItem);
+    }
+  });
+
+  // Touch support for drag and drop
+  let touchItem = null;
+  let touchClone = null;
+  let touchStartY = 0;
+
+  sectionList.addEventListener("touchstart", (e) => {
+    const item = e.target.closest(".section-item");
+    if (!item) return;
+    touchItem = item;
+    touchStartY = e.touches[0].clientY;
+    touchItem.classList.add("dragging");
+  }, { passive: true });
+
+  sectionList.addEventListener("touchmove", (e) => {
+    if (!touchItem) return;
+    e.preventDefault();
+    const touchY = e.touches[0].clientY;
+    const items = [...sectionList.children];
+    for (const item of items) {
+      if (item === touchItem) continue;
+      const rect = item.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (touchY < mid && items.indexOf(touchItem) > items.indexOf(item)) {
+        item.before(touchItem);
+        break;
+      } else if (touchY > mid && items.indexOf(touchItem) < items.indexOf(item)) {
+        item.after(touchItem);
+        break;
+      }
+    }
+  }, { passive: false });
+
+  sectionList.addEventListener("touchend", () => {
+    if (touchItem) {
+      touchItem.classList.remove("dragging");
+      touchItem = null;
+      updateSectionOrder();
+      if (currentData) regenerate();
+    }
+  });
+
+  function updateSectionOrder() {
+    sectionOrder = [...sectionList.querySelectorAll(".section-item")].map(
+      (el) => el.dataset.section
+    );
+  }
+
   // ---- Main handler ----
   async function handleGenerate() {
     const username = usernameInput.value.trim();
@@ -75,7 +181,6 @@
       return;
     }
 
-    // Basic validation
     if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/.test(username)) {
       showError('Invalid username "' + username + '". GitHub usernames can only contain letters, numbers, and hyphens.');
       return;
@@ -87,13 +192,11 @@
 
     try {
       const data = await GitHubAPI.fetchAll(username);
+      currentData = data;
       renderProfile(data);
       renderLanguages(data.languages);
       renderTopRepos(data.topRepos);
-
-      // Generate README
-      currentMarkdown = ReadmeGenerator.generate(data);
-      renderReadme(currentMarkdown);
+      regenerate();
 
       resultsSection.hidden = false;
       resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -102,6 +205,14 @@
     } finally {
       setLoading(false);
     }
+  }
+
+  function regenerate() {
+    currentMarkdown = ReadmeGenerator.generate(currentData, {
+      style: currentStyle,
+      sectionOrder: sectionOrder,
+    });
+    renderReadme(currentMarkdown);
   }
 
   // ---- Renderers ----
@@ -137,7 +248,6 @@
       `;
       languagesChart.appendChild(row);
 
-      // Animate bar after append
       requestAnimationFrame(() => {
         row.querySelector(".lang-bar").style.width = `${lang.pct}%`;
       });
@@ -170,24 +280,19 @@
   }
 
   function renderReadme(markdown) {
-    // Preview (rendered HTML)
     if (typeof marked !== "undefined") {
-      marked.setOptions({
-        breaks: true,
-        gfm: true,
-      });
+      marked.setOptions({ breaks: true, gfm: true });
       readmePreview.innerHTML = marked.parse(markdown);
 
-      // Only streak-stats remains as an external service — add fallback
       readmePreview.querySelectorAll("img").forEach((img) => {
         const src = img.src || "";
-        if (src.includes("streak-stats")) {
+        if (src.includes("streak-stats") || src.includes("capsule-render")) {
           img.onerror = function () {
             const placeholder = document.createElement("div");
             placeholder.className = "stat-img-placeholder";
             placeholder.innerHTML =
               '<span class="stat-img-icon">🔥</span>' +
-              '<span class="stat-img-label">' + escapeHTML(img.alt || "Streak Stats") + '</span>' +
+              '<span class="stat-img-label">' + escapeHTML(img.alt || "Stats") + '</span>' +
               '<span class="stat-img-note">Renders on GitHub — copy the markdown to use it</span>';
             img.replaceWith(placeholder);
           };
@@ -196,7 +301,6 @@
     } else {
       readmePreview.textContent = markdown;
     }
-    // Raw
     readmeRaw.textContent = markdown;
   }
 
@@ -207,7 +311,6 @@
       await navigator.clipboard.writeText(currentMarkdown);
       showToast("Copied to clipboard!");
     } catch {
-      // Fallback
       const ta = document.createElement("textarea");
       ta.value = currentMarkdown;
       ta.style.position = "fixed";
