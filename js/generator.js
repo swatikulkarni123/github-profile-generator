@@ -1,14 +1,11 @@
 /**
  * README Markdown Generator.
  * Takes GitHub data and produces a complete profile README.
+ * Supports multiple styles and custom section ordering.
  */
 
 const ReadmeGenerator = (() => {
-  /**
-   * Map programming languages to skill categories with badge info.
-   */
   const SKILL_MAP = {
-    // Languages
     JavaScript:  { badge: "JavaScript-F7DF1E?logo=javascript&logoColor=black", category: "language" },
     TypeScript:  { badge: "TypeScript-3178C6?logo=typescript&logoColor=white", category: "language" },
     Python:      { badge: "Python-3776AB?logo=python&logoColor=white", category: "language" },
@@ -32,35 +29,25 @@ const ReadmeGenerator = (() => {
     Lua:         { badge: "Lua-2C2D72?logo=lua&logoColor=white", category: "language" },
     Zig:         { badge: "Zig-F7A41D?logo=zig&logoColor=black", category: "language" },
     Nim:         { badge: "Nim-FFE953?logo=nim&logoColor=black", category: "language" },
-
-    // Frontend
     HTML:        { badge: "HTML5-E34F26?logo=html5&logoColor=white", category: "frontend" },
     CSS:         { badge: "CSS3-1572B6?logo=css3&logoColor=white", category: "frontend" },
     SCSS:        { badge: "Sass-CC6699?logo=sass&logoColor=white", category: "frontend" },
     Vue:         { badge: "Vue.js-4FC08D?logo=vuedotjs&logoColor=white", category: "frontend" },
     Svelte:      { badge: "Svelte-FF3E00?logo=svelte&logoColor=white", category: "frontend" },
-
-    // Data / ML
     "Jupyter Notebook": { badge: "Jupyter-F37626?logo=jupyter&logoColor=white", category: "data" },
     Jupyter:     { badge: "Jupyter-F37626?logo=jupyter&logoColor=white", category: "data" },
-
-    // DevOps
     Dockerfile:  { badge: "Docker-2496ED?logo=docker&logoColor=white", category: "devops" },
     HCL:         { badge: "Terraform-7B42BC?logo=terraform&logoColor=white", category: "devops" },
     Nix:         { badge: "Nix-5277C3?logo=nixos&logoColor=white", category: "devops" },
     PowerShell:  { badge: "PowerShell-5391FE?logo=powershell&logoColor=white", category: "devops" },
   };
 
-  /**
-   * Infer additional tools/frameworks from repo topics and names.
-   */
   function inferTools(repos) {
     const tools = new Set();
     const allText = repos
       .map((r) => `${r.name} ${r.description || ""} ${(r.topics || []).join(" ")}`)
       .join(" ")
       .toLowerCase();
-
     const toolPatterns = [
       { pattern: /react/,        badge: "React-61DAFB?logo=react&logoColor=black" },
       { pattern: /next\.?js|nextjs/, badge: "Next.js-000000?logo=nextdotjs&logoColor=white" },
@@ -95,42 +82,29 @@ const ReadmeGenerator = (() => {
       { pattern: /git(?!hub)/,   badge: "Git-F05032?logo=git&logoColor=white" },
       { pattern: /linux/,        badge: "Linux-FCC624?logo=linux&logoColor=black" },
     ];
-
     for (const { pattern, badge } of toolPatterns) {
-      if (pattern.test(allText)) {
-        tools.add(badge);
-      }
+      if (pattern.test(allText)) tools.add(badge);
     }
-
     return [...tools];
   }
 
-  /**
-   * Build the shield.io badge markdown for a given badge string.
-   */
-  function badge(b) {
-    return `![](https://img.shields.io/badge/${b}&style=for-the-badge)`;
+  // ---- Badge helpers ----
+
+  function badge(b, style) {
+    const s = style === "minimal" ? "flat-square" : "for-the-badge";
+    return `![](https://img.shields.io/badge/${b}&style=${s})`;
   }
 
-  /**
-   * Create a shields.io static badge URL.
-   * Shields format: /badge/LABEL-MESSAGE-COLOR
-   * Dashes in label/message must be doubled (--), spaces become underscores.
-   */
-  function staticBadge(label, value, color, opts) {
+  function staticBadge(label, value, color, opts, style) {
     const esc = (s) => String(s).replace(/-/g, "--").replace(/_/g, "__").replace(/ /g, "_");
-    let url = `https://img.shields.io/badge/${esc(label)}-${esc(value)}-${color}?style=for-the-badge`;
+    const s = style === "minimal" ? "flat-square" : "for-the-badge";
+    let url = `https://img.shields.io/badge/${esc(label)}-${esc(value)}-${color}?style=${s}`;
     if (opts && opts.logo) url += `&logo=${opts.logo}&logoColor=white`;
     return url;
   }
 
-  /**
-   * Compute extra stats from repos array.
-   */
   function computeExtraStats(repos) {
-    let totalForks = 0;
-    let totalIssues = 0;
-    let originalRepos = 0;
+    let totalForks = 0, totalIssues = 0, originalRepos = 0;
     for (const r of repos) {
       totalForks += r.forks_count || 0;
       totalIssues += r.open_issues_count || 0;
@@ -139,9 +113,6 @@ const ReadmeGenerator = (() => {
     return { totalForks, totalIssues, originalRepos };
   }
 
-  /**
-   * Determine trophy tier for a numeric value.
-   */
   function trophyTier(value, thresholds) {
     for (let i = thresholds.length - 1; i >= 0; i--) {
       if (value >= thresholds[i].min) return thresholds[i];
@@ -149,176 +120,238 @@ const ReadmeGenerator = (() => {
     return null;
   }
 
-  /**
-   * Generate achievement trophies based on actual user stats.
-   */
   function generateTrophies(data) {
     const { user, repos, languages, totalStars } = data;
     const extra = computeExtraStats(repos);
     const trophies = [];
 
-    // Star trophies
     const starTier = trophyTier(totalStars, [
-      { min: 1,    label: "Star Gazer",     icon: "⭐", color: "C0C0C0" },
-      { min: 10,   label: "Star Collector",  icon: "⭐", color: "FFD700" },
-      { min: 50,   label: "Star Magnet",     icon: "🌟", color: "FF8C00" },
-      { min: 100,  label: "Star Master",     icon: "🌟", color: "FF4500" },
-      { min: 500,  label: "Superstar",       icon: "💫", color: "FF0000" },
-      { min: 1000, label: "Star Legend",      icon: "💫", color: "8B0000" },
+      { min: 1, label: "Star Gazer", icon: "⭐", color: "C0C0C0" },
+      { min: 10, label: "Star Collector", icon: "⭐", color: "FFD700" },
+      { min: 50, label: "Star Magnet", icon: "🌟", color: "FF8C00" },
+      { min: 100, label: "Star Master", icon: "🌟", color: "FF4500" },
+      { min: 500, label: "Superstar", icon: "💫", color: "FF0000" },
+      { min: 1000, label: "Star Legend", icon: "💫", color: "8B0000" },
     ]);
     if (starTier) trophies.push({ ...starTier, value: `${totalStars} Stars` });
 
-    // Repo trophies
     const repoTier = trophyTier(extra.originalRepos, [
-      { min: 1,   label: "First Repo",       icon: "📦", color: "C0C0C0" },
-      { min: 5,   label: "Creator",           icon: "📦", color: "4169E1" },
-      { min: 10,  label: "Repository Pro",    icon: "📁", color: "3fb950" },
-      { min: 30,  label: "Prolific Coder",    icon: "📁", color: "228B22" },
-      { min: 50,  label: "Repo Machine",      icon: "🗂️", color: "006400" },
-      { min: 100, label: "Repo Legend",        icon: "🗂️", color: "004d00" },
+      { min: 1, label: "First Repo", icon: "📦", color: "C0C0C0" },
+      { min: 5, label: "Creator", icon: "📦", color: "4169E1" },
+      { min: 10, label: "Repository Pro", icon: "📁", color: "3fb950" },
+      { min: 30, label: "Prolific Coder", icon: "📁", color: "228B22" },
+      { min: 50, label: "Repo Machine", icon: "🗂️", color: "006400" },
+      { min: 100, label: "Repo Legend", icon: "🗂️", color: "004d00" },
     ]);
     if (repoTier) trophies.push({ ...repoTier, value: `${extra.originalRepos} Repos` });
 
-    // Follower trophies
     const followerTier = trophyTier(user.followers, [
-      { min: 1,    label: "Friendly Face",    icon: "👥", color: "C0C0C0" },
-      { min: 10,   label: "Networker",         icon: "👥", color: "9370DB" },
-      { min: 50,   label: "Influencer",        icon: "🌐", color: "8A2BE2" },
-      { min: 100,  label: "Community Star",    icon: "🌐", color: "7B1FA2" },
-      { min: 500,  label: "Thought Leader",    icon: "🏛️", color: "6A0DAD" },
-      { min: 1000, label: "GitHub Celebrity",   icon: "🏛️", color: "4a0080" },
+      { min: 1, label: "Friendly Face", icon: "👥", color: "C0C0C0" },
+      { min: 10, label: "Networker", icon: "👥", color: "9370DB" },
+      { min: 50, label: "Influencer", icon: "🌐", color: "8A2BE2" },
+      { min: 100, label: "Community Star", icon: "🌐", color: "7B1FA2" },
+      { min: 500, label: "Thought Leader", icon: "🏛️", color: "6A0DAD" },
+      { min: 1000, label: "GitHub Celebrity", icon: "🏛️", color: "4a0080" },
     ]);
     if (followerTier) trophies.push({ ...followerTier, value: `${user.followers} Followers` });
 
-    // Language trophies
     const langCount = languages.length;
     const langTier = trophyTier(langCount, [
-      { min: 1,  label: "Coder",             icon: "💻", color: "C0C0C0" },
-      { min: 3,  label: "Multilingual",       icon: "💻", color: "1E90FF" },
-      { min: 5,  label: "Polyglot",           icon: "🔤", color: "0077B6" },
-      { min: 8,  label: "Language Master",    icon: "🔤", color: "005f8a" },
-      { min: 12, label: "Language Legend",      icon: "🗣️", color: "003f5c" },
+      { min: 1, label: "Coder", icon: "💻", color: "C0C0C0" },
+      { min: 3, label: "Multilingual", icon: "💻", color: "1E90FF" },
+      { min: 5, label: "Polyglot", icon: "🔤", color: "0077B6" },
+      { min: 8, label: "Language Master", icon: "🔤", color: "005f8a" },
+      { min: 12, label: "Language Legend", icon: "🗣️", color: "003f5c" },
     ]);
     if (langTier) trophies.push({ ...langTier, value: `${langCount} Languages` });
 
-    // Fork trophies
     const forkTier = trophyTier(extra.totalForks, [
-      { min: 1,   label: "Forked",            icon: "🍴", color: "C0C0C0" },
-      { min: 10,  label: "Popular Code",       icon: "🍴", color: "D29922" },
-      { min: 50,  label: "Fork Magnet",        icon: "🔱", color: "FF8C00" },
-      { min: 100, label: "Fork Master",        icon: "🔱", color: "FF4500" },
+      { min: 1, label: "Forked", icon: "🍴", color: "C0C0C0" },
+      { min: 10, label: "Popular Code", icon: "🍴", color: "D29922" },
+      { min: 50, label: "Fork Magnet", icon: "🔱", color: "FF8C00" },
+      { min: 100, label: "Fork Master", icon: "🔱", color: "FF4500" },
     ]);
     if (forkTier) trophies.push({ ...forkTier, value: `${extra.totalForks} Forks` });
 
-    // Account age trophy
     const createdYear = new Date(user.created_at).getFullYear();
     const yearsActive = new Date().getFullYear() - createdYear;
     const ageTier = trophyTier(yearsActive, [
-      { min: 1,  label: "GitHub Member",      icon: "📅", color: "C0C0C0" },
-      { min: 2,  label: "Dedicated",           icon: "📅", color: "20B2AA" },
-      { min: 5,  label: "Veteran",             icon: "🎖️", color: "2E8B57" },
-      { min: 8,  label: "OG Developer",        icon: "🎖️", color: "006400" },
-      { min: 10, label: "GitHub Pioneer",       icon: "🏅", color: "8B4513" },
+      { min: 1, label: "GitHub Member", icon: "📅", color: "C0C0C0" },
+      { min: 2, label: "Dedicated", icon: "📅", color: "20B2AA" },
+      { min: 5, label: "Veteran", icon: "🎖️", color: "2E8B57" },
+      { min: 8, label: "OG Developer", icon: "🎖️", color: "006400" },
+      { min: 10, label: "GitHub Pioneer", icon: "🏅", color: "8B4513" },
     ]);
     if (ageTier) trophies.push({ ...ageTier, value: `Since ${createdYear}` });
 
     return trophies;
   }
 
-  /**
-   * Generate complete README markdown from fetched data.
-   */
-  function generate(data) {
-    const { user, repos, languages, topRepos, totalStars } = data;
-    const username = user.login;
-    const displayName = user.name || username;
-    const bio = user.bio || "Passionate developer building awesome things.";
-    const location = user.location ? ` from ${user.location}` : "";
-    const blog = user.blog || "";
-    const twitter = user.twitter_username || "";
+  // ==================================================================
+  //  Section Builders — each returns an array of markdown lines.
+  //  Signature: build(data, style) => string[]
+  // ==================================================================
 
-    const lines = [];
+  const SECTION_BUILDERS = {
 
-    // ---- Header with wave ----
-    lines.push(`<div align="center">`);
-    lines.push(``);
-    lines.push(`# Hi there, I'm ${displayName} <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="30px" />`);
-    lines.push(``);
-    lines.push(`### ${bio}`);
-    lines.push(``);
+    header(data, style) {
+      const { user, totalStars } = data;
+      const username = user.login;
+      const displayName = user.name || username;
+      const bio = user.bio || "Passionate developer building awesome things.";
+      const twitter = user.twitter_username || "";
+      const lines = [];
 
-    // Visitor badge + social badges
-    const socialBadges = [];
-    socialBadges.push(
-      `[![GitHub followers](https://img.shields.io/github/followers/${username}?label=Follow&style=social)](https://github.com/${username})`
-    );
-    if (twitter) {
-      socialBadges.push(
-        `[![Twitter Follow](https://img.shields.io/twitter/follow/${twitter}?style=social)](https://twitter.com/${twitter})`
-      );
-    }
-    socialBadges.push(
-      `![Profile Views](https://komarev.com/ghpvc/?username=${username}&color=58a6ff&style=flat-square)`
-    );
-    lines.push(socialBadges.join(" &nbsp; "));
-    lines.push(``);
-    lines.push(`</div>`);
-    lines.push(``);
+      if (style === "hacker") {
+        lines.push(`\`\`\``, `     ___  _ _   _  _       _    `);
+        lines.push(`    / __|| |_| || |_ _  _| |__  `);
+        lines.push(`   | (_ || |  _||   | || | '_ \\ `);
+        lines.push(`    \\___||_|\\__||_|_|\\_,_|_.__/ `);
+        lines.push(`\`\`\``);
+        lines.push(``);
+        lines.push(`# > whoami`);
+        lines.push(`## ${displayName} \`@${username}\``);
+        lines.push(``);
+        lines.push(`> ${bio}`);
+      } else if (style === "minimal") {
+        lines.push(`# ${displayName}`);
+        lines.push(``);
+        lines.push(`${bio}`);
+        lines.push(``);
+        lines.push(`[![GitHub](https://img.shields.io/badge/-${username}-181717?style=flat-square&logo=github)](https://github.com/${username})`);
+      } else if (style === "elegant") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,19,24&height=180&section=header&text=${encodeURIComponent(displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent(bio)}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else {
+        // classic
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`# Hi there, I'm ${displayName} <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="30px" />`);
+        lines.push(``);
+        lines.push(`### ${bio}`);
+        lines.push(``);
+      }
 
-    // ---- About Me ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 🧑‍💻 About Me`);
-    lines.push(``);
+      // Social badges (classic + elegant get centered)
+      if (style !== "hacker" && style !== "minimal") {
+        const socialBadges = [];
+        socialBadges.push(`[![GitHub followers](https://img.shields.io/github/followers/${username}?label=Follow&style=social)](https://github.com/${username})`);
+        if (twitter) socialBadges.push(`[![Twitter Follow](https://img.shields.io/twitter/follow/${twitter}?style=social)](https://twitter.com/${twitter})`);
+        socialBadges.push(`![Profile Views](https://komarev.com/ghpvc/?username=${username}&color=58a6ff&style=flat-square)`);
+        lines.push(socialBadges.join(" &nbsp; "));
+        lines.push(``);
+        lines.push(`</div>`);
+      } else if (style === "hacker") {
+        lines.push(``);
+        lines.push(`![Profile Views](https://komarev.com/ghpvc/?username=${username}&color=3fb950&style=flat-square&label=visitors)`);
+      }
 
-    const aboutItems = [];
-    aboutItems.push(`🔭 I have **${repos.length}** public repositories on GitHub`);
-    if (location) aboutItems.push(`🌍 Based${location}`);
-    aboutItems.push(`⭐ **${totalStars}** total stars earned across my projects`);
-    aboutItems.push(`👥 **${user.followers}** followers · **${user.following}** following`);
-    if (user.company) aboutItems.push(`🏢 Working at **${user.company}**`);
-    if (blog) aboutItems.push(`📝 Check out my blog/portfolio: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
-    if (user.hireable) aboutItems.push(`💼 Open to new opportunities!`);
+      lines.push(``);
+      return lines;
+    },
 
-    for (const item of aboutItems) {
-      lines.push(`- ${item}`);
-    }
-    lines.push(``);
+    about(data, style) {
+      const { user, repos, totalStars } = data;
+      const location = user.location ? ` from ${user.location}` : "";
+      const blog = user.blog || "";
+      const lines = [];
 
-    // ---- Tech Stack ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 🛠️ Tech Stack`);
-    lines.push(``);
+      if (style === "hacker") {
+        lines.push(`# > cat about.md`);
+      } else if (style === "minimal") {
+        lines.push(`## About`);
+      } else if (style === "elegant") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<h2 align="center">About Me</h2>`);
+      } else {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`## 🧑‍💻 About Me`);
+      }
+      lines.push(``);
 
-    // Language badges from actual repos
-    const langBadges = languages
-      .slice(0, 12)
-      .map((l) => {
+      const items = [];
+      if (style === "hacker") {
+        items.push(`\`${repos.length}\` public repositories`);
+        if (location) items.push(`Based${location}`);
+        items.push(`\`${totalStars}\` total stars earned`);
+        items.push(`\`${user.followers}\` followers · \`${user.following}\` following`);
+        if (user.company) items.push(`Working at **${user.company}**`);
+        if (blog) items.push(`Blog: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
+      } else {
+        items.push(`🔭 I have **${repos.length}** public repositories on GitHub`);
+        if (location) items.push(`🌍 Based${location}`);
+        items.push(`⭐ **${totalStars}** total stars earned across my projects`);
+        items.push(`👥 **${user.followers}** followers · **${user.following}** following`);
+        if (user.company) items.push(`🏢 Working at **${user.company}**`);
+        if (blog) items.push(`📝 Check out my blog/portfolio: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
+        if (user.hireable) items.push(`💼 Open to new opportunities!`);
+      }
+      for (const item of items) lines.push(`- ${item}`);
+      lines.push(``);
+      return lines;
+    },
+
+    techStack(data, style) {
+      const { repos, languages } = data;
+      const lines = [];
+
+      if (style === "hacker") {
+        lines.push(`# > ls ~/skills`);
+      } else if (style === "minimal") {
+        lines.push(`## Tech Stack`);
+      } else if (style === "elegant") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<h2 align="center">Tech Stack</h2>`);
+      } else {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`## 🛠️ Tech Stack`);
+      }
+      lines.push(``);
+
+      const langBadges = languages.slice(0, 12).map((l) => {
         const info = SKILL_MAP[l.name];
-        return info ? badge(info.badge) : null;
-      })
-      .filter(Boolean);
+        return info ? badge(info.badge, style) : null;
+      }).filter(Boolean);
 
-    if (langBadges.length) {
-      lines.push(`### Languages`);
-      lines.push(langBadges.join(" "));
-      lines.push(``);
-    }
+      if (langBadges.length) {
+        if (style !== "minimal" && style !== "hacker") lines.push(`### Languages`);
+        lines.push(langBadges.join(" "));
+        lines.push(``);
+      }
 
-    // Tools & frameworks inferred from repos
-    const toolBadges = inferTools(repos);
-    if (toolBadges.length) {
-      lines.push(`### Frameworks & Tools`);
-      lines.push(toolBadges.map(badge).join(" "));
-      lines.push(``);
-    }
+      const toolBadges = inferTools(repos);
+      if (toolBadges.length) {
+        if (style !== "minimal" && style !== "hacker") lines.push(`### Frameworks & Tools`);
+        lines.push(toolBadges.map((b) => badge(b, style)).join(" "));
+        lines.push(``);
+      }
+      return lines;
+    },
 
-    // ---- Top Projects ----
-    if (topRepos.length) {
-      lines.push(`---`);
-      lines.push(``);
-      lines.push(`## 🚀 Top Projects`);
+    topProjects(data, style) {
+      const { topRepos } = data;
+      if (!topRepos.length) return [];
+      const lines = [];
+
+      if (style === "hacker") {
+        lines.push(`# > ls ~/top-projects --sort=stars`);
+      } else if (style === "minimal") {
+        lines.push(`## Top Projects`);
+      } else if (style === "elegant") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<h2 align="center">Top Projects</h2>`);
+      } else {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`## 🚀 Top Projects`);
+      }
       lines.push(``);
       lines.push(`| Project | Description | Stars | Language |`);
       lines.push(`|---------|-------------|-------|----------|`);
@@ -326,116 +359,254 @@ const ReadmeGenerator = (() => {
       for (const repo of topRepos) {
         const desc = (repo.description || "—").replace(/\|/g, "\\|");
         const lang = repo.language || "—";
-        lines.push(
-          `| [**${repo.name}**](${repo.html_url}) | ${desc} | ⭐ ${repo.stargazers_count} | ${lang} |`
-        );
+        lines.push(`| [**${repo.name}**](${repo.html_url}) | ${desc} | ⭐ ${repo.stargazers_count} | ${lang} |`);
       }
       lines.push(``);
+      return lines;
+    },
+
+    stats(data, style) {
+      const { user, repos, totalStars } = data;
+      const extra = computeExtraStats(repos);
+      const lines = [];
+
+      if (style === "hacker") {
+        lines.push(`# > neofetch --github`);
+        lines.push(``);
+        lines.push(`| Stat | Value |`);
+        lines.push(`|------|-------|`);
+        lines.push(`| Repositories | \`${extra.originalRepos}\` |`);
+        lines.push(`| Total Stars | \`${totalStars}\` |`);
+        lines.push(`| Followers | \`${user.followers}\` |`);
+        lines.push(`| Total Forks | \`${extra.totalForks}\` |`);
+        lines.push(``);
+      } else if (style === "minimal") {
+        lines.push(`## Stats`);
+        lines.push(``);
+        lines.push(`**${totalStars}** stars · **${extra.originalRepos}** repos · **${user.followers}** followers · **${extra.totalForks}** forks`);
+        lines.push(``);
+      } else {
+        if (style === "elegant") {
+          lines.push(`---`);
+          lines.push(``);
+          lines.push(`<h2 align="center">GitHub Stats</h2>`);
+        } else {
+          lines.push(`---`);
+          lines.push(``);
+          lines.push(`## 📊 GitHub Stats`);
+        }
+        lines.push(``);
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(
+          `![](${staticBadge("Total Stars", totalStars, "58a6ff", { logo: "github" }, style)}) ` +
+          `![](${staticBadge("Repositories", extra.originalRepos, "3fb950", { logo: "bookmarks" }, style)}) ` +
+          `![](${staticBadge("Followers", user.followers, "bc8cff", { logo: "people" }, style)}) ` +
+          `![](${staticBadge("Forks", extra.totalForks, "d29922", { logo: "git" }, style)})`
+        );
+        lines.push(``);
+        lines.push(`</div>`);
+        lines.push(``);
+      }
+      return lines;
+    },
+
+    languages(data, style) {
+      const topLangs = data.languages.slice(0, 8);
+      if (!topLangs.length) return [];
+      const lines = [];
+
+      if (style === "hacker") {
+        lines.push(`# > wc -l ~/code/**/* | sort -rn | head`);
+        lines.push(``);
+        for (const l of topLangs) {
+          const bar = "█".repeat(Math.max(1, Math.round(l.pct / 5))) + "░".repeat(Math.max(0, 20 - Math.round(l.pct / 5)));
+          lines.push(`\`${l.name.padEnd(14)} ${bar} ${l.pct}%\``);
+        }
+        lines.push(``);
+      } else if (style === "minimal") {
+        // skip — minimal keeps it brief
+        return [];
+      } else {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(topLangs.map((l) => {
+          const c = (LANG_COLORS[l.name] || "#8b949e").replace("#", "");
+          return `![](${staticBadge(l.name, l.pct + "%", c, null, style)})`;
+        }).join(" "));
+        lines.push(``);
+        lines.push(`</div>`);
+        lines.push(``);
+      }
+      return lines;
+    },
+
+    streak(data, style) {
+      const username = data.user.login;
+      const lines = [];
+      const theme = style === "hacker" ? "dark" : "github-dark-blue";
+
+      if (style === "minimal") return [];
+
+      if (style === "elegant") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+      } else if (style !== "hacker") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+      }
+
+      lines.push(`<img src="https://streak-stats.demolab.com/?user=${username}&theme=${theme}&hide_border=true" alt="GitHub Streak" />`);
+      lines.push(``);
+
+      if (style !== "hacker") {
+        lines.push(`</div>`);
+        lines.push(``);
+      }
+      return lines;
+    },
+
+    trophies(data, style) {
+      const trophies = generateTrophies(data);
+      if (!trophies.length) return [];
+      const lines = [];
+
+      if (style === "minimal") return [];
+
+      if (style === "hacker") {
+        lines.push(`# > cat ~/.achievements`);
+      } else if (style === "elegant") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<h2 align="center">Achievements</h2>`);
+      } else {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`## 🏆 GitHub Trophies`);
+      }
+      lines.push(``);
+
+      if (style === "hacker") {
+        for (const t of trophies) {
+          lines.push(`- ${t.icon} **${t.label}** — \`${t.value}\``);
+        }
+        lines.push(``);
+      } else {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(trophies.map((t) =>
+          `![](${staticBadge(t.icon + " " + t.label, t.value, t.color, null, style)})`
+        ).join(" "));
+        lines.push(``);
+        lines.push(`</div>`);
+        lines.push(``);
+      }
+      return lines;
+    },
+
+    connect(data, style) {
+      const { user } = data;
+      const username = user.login;
+      const twitter = user.twitter_username || "";
+      const blog = user.blog || "";
+      const lines = [];
+
+      if (style === "hacker") {
+        lines.push(`# > cat ~/.contact`);
+        lines.push(``);
+        lines.push(`- GitHub: [\`@${username}\`](https://github.com/${username})`);
+        if (twitter) lines.push(`- Twitter: [\`@${twitter}\`](https://twitter.com/${twitter})`);
+        if (blog) lines.push(`- Web: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
+        if (user.email) lines.push(`- Email: [\`${user.email}\`](mailto:${user.email})`);
+        lines.push(``);
+      } else {
+        if (style === "elegant") {
+          lines.push(`---`);
+          lines.push(``);
+          lines.push(`<h2 align="center">Connect with Me</h2>`);
+        } else if (style === "minimal") {
+          lines.push(`## Connect`);
+        } else {
+          lines.push(`---`);
+          lines.push(``);
+          lines.push(`## 📫 Connect with Me`);
+        }
+        lines.push(``);
+        const bs = style === "minimal" ? "flat-square" : "for-the-badge";
+        const connectBadges = [];
+        connectBadges.push(`[![GitHub](https://img.shields.io/badge/GitHub-181717?style=${bs}&logo=github&logoColor=white)](https://github.com/${username})`);
+        if (twitter) connectBadges.push(`[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=${bs}&logo=twitter&logoColor=white)](https://twitter.com/${twitter})`);
+        if (blog) connectBadges.push(`[![Website](https://img.shields.io/badge/Website-4285F4?style=${bs}&logo=googlechrome&logoColor=white)](https://${blog.replace(/^https?:\/\//, "")})`);
+        if (user.email) connectBadges.push(`[![Email](https://img.shields.io/badge/Email-D14836?style=${bs}&logo=gmail&logoColor=white)](mailto:${user.email})`);
+        lines.push(connectBadges.join(" "));
+        lines.push(``);
+      }
+      return lines;
+    },
+
+    footer(data, style) {
+      const lines = [];
+      if (style === "hacker") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`\`\`\``);
+        lines.push(`$ echo "Thanks for visiting! Star my repos if you find them useful."`);
+        lines.push(`\`\`\``);
+      } else if (style === "minimal") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`*Star my repos if you find them useful!*`);
+      } else if (style === "elegant") {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`*Thank you for visiting!*`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,19,24&height=80&section=footer" width="100%" />`);
+        lines.push(``);
+        lines.push(`</div>`);
+      } else {
+        lines.push(`---`);
+        lines.push(``);
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`**⭐ Star my repos if you find them useful!**`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,12,19&height=80&section=footer" width="100%" />`);
+        lines.push(``);
+        lines.push(`</div>`);
+      }
+      return lines;
+    },
+  };
+
+  // ---- Default section order ----
+  const DEFAULT_ORDER = [
+    "header", "about", "techStack", "topProjects",
+    "stats", "languages", "streak", "trophies", "connect", "footer",
+  ];
+
+  /**
+   * Generate complete README markdown.
+   * @param {object} data - GitHub data from API
+   * @param {object} [options] - { style: string, sectionOrder: string[] }
+   */
+  function generate(data, options) {
+    const style = (options && options.style) || "classic";
+    const order = (options && options.sectionOrder) || DEFAULT_ORDER;
+    const allLines = [];
+
+    for (const sectionId of order) {
+      const builder = SECTION_BUILDERS[sectionId];
+      if (builder) {
+        const sectionLines = builder(data, style);
+        allLines.push(...sectionLines);
+      }
     }
 
-    // ---- GitHub Stats (native badges — always loads) ----
-    const extra = computeExtraStats(repos);
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 📊 GitHub Stats`);
-    lines.push(``);
-    lines.push(`<div align="center">`);
-    lines.push(``);
-    lines.push(
-      `![](${staticBadge("Total Stars", totalStars, "58a6ff", { logo: "github" })}) ` +
-      `![](${staticBadge("Repositories", extra.originalRepos, "3fb950", { logo: "bookmarks" })}) ` +
-      `![](${staticBadge("Followers", user.followers, "bc8cff", { logo: "people" })}) ` +
-      `![](${staticBadge("Forks", extra.totalForks, "d29922", { logo: "git" })})`
-    );
-    lines.push(``);
-    lines.push(`</div>`);
-    lines.push(``);
-
-    // ---- Top Languages breakdown ----
-    const topLangs = languages.slice(0, 8);
-    if (topLangs.length) {
-      lines.push(`<div align="center">`);
-      lines.push(``);
-      lines.push(topLangs.map((l) => {
-        const c = (LANG_COLORS[l.name] || "#8b949e").replace("#", "");
-        return `![](${staticBadge(l.name, l.pct + "%", c)})`;
-      }).join(" "));
-      lines.push(``);
-      lines.push(`</div>`);
-      lines.push(``);
-    }
-
-    // ---- Streak Stats (demolab.com — works reliably) ----
-    lines.push(`<div align="center">`);
-    lines.push(``);
-    lines.push(
-      `<img src="https://streak-stats.demolab.com/?user=${username}&theme=github-dark-blue&hide_border=true" alt="GitHub Streak" />`
-    );
-    lines.push(``);
-    lines.push(`</div>`);
-    lines.push(``);
-
-    // ---- Trophies (native achievement badges — always loads) ----
-    const trophies = generateTrophies(data);
-    if (trophies.length) {
-      lines.push(`---`);
-      lines.push(``);
-      lines.push(`## 🏆 GitHub Trophies`);
-      lines.push(``);
-      lines.push(`<div align="center">`);
-      lines.push(``);
-      lines.push(trophies.map((t) =>
-        `![](${staticBadge(t.icon + " " + t.label, t.value, t.color)})`
-      ).join(" "));
-      lines.push(``);
-      lines.push(`</div>`);
-      lines.push(``);
-    };
-
-    // ---- Connect ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`## 📫 Connect with Me`);
-    lines.push(``);
-
-    const connectBadges = [];
-    connectBadges.push(
-      `[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/${username})`
-    );
-    if (twitter) {
-      connectBadges.push(
-        `[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/${twitter})`
-      );
-    }
-    if (blog) {
-      connectBadges.push(
-        `[![Website](https://img.shields.io/badge/Website-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://${blog.replace(/^https?:\/\//, "")})`
-      );
-    }
-    if (user.email) {
-      connectBadges.push(
-        `[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:${user.email})`
-      );
-    }
-
-    lines.push(connectBadges.join(" "));
-    lines.push(``);
-
-    // ---- Footer ----
-    lines.push(`---`);
-    lines.push(``);
-    lines.push(`<div align="center">`);
-    lines.push(``);
-    lines.push(`**⭐ Star my repos if you find them useful!**`);
-    lines.push(``);
-    lines.push(
-      `<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,12,19&height=80&section=footer" width="100%" />`
-    );
-    lines.push(``);
-    lines.push(`</div>`);
-
-    return lines.join("\n");
+    return allLines.join("\n");
   }
 
-  return { generate };
+  return { generate, DEFAULT_ORDER };
 })();
