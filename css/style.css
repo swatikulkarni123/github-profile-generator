@@ -681,6 +681,70 @@ a:hover {
   background: linear-gradient(135deg, #bc8cff 0%, #58a6ff 50%, #f778ba 100%);
 }
 
+.style-preview-portfolio {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.style-preview-futuristic {
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+}
+
+.style-preview-resume {
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+}
+
+.style-preview-gradient {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #ffd200 100%);
+}
+
+.style-preview-opensource {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.style-preview-compact {
+  background: linear-gradient(135deg, #434343 0%, #000000 100%);
+}
+
+.style-preview-animated {
+  background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+}
+
+.style-preview-startup {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%);
+}
+
+.style-preview-devops {
+  background: linear-gradient(135deg, #0052d4 0%, #4364f7 50%, #6fb1fc 100%);
+}
+
+.style-preview-mobile {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.style-preview-aiml {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+.style-preview-pastel {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 50%, #ff9a9e 100%);
+}
+
+.style-preview-monochrome {
+  background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+}
+
+.style-preview-timeline {
+  background: linear-gradient(135deg, #e44d26 0%, #f7df1e 50%, #3178c6 100%);
+}
+
+.style-preview-badges {
+  background: linear-gradient(135deg, #ff6b6b 0%, #feca57 33%, #48dbfb 66%, #ff9ff3 100%);
+}
+
+.style-preview-premium {
+  background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+}
+
 .style-name {
   font-size: 0.85rem;
   font-weight: 600;
@@ -767,6 +831,25 @@ a:hover {
   color: var(--text-muted);
   font-size: 0.85rem;
   line-height: 1.8;
+}
+
+.visitor-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.generation-counter {
+  display: inline-block;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 /* ---------- Responsive ---------- */

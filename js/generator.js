@@ -91,14 +91,14 @@ const ReadmeGenerator = (() => {
   // ---- Badge helpers ----
 
   function badge(b, style) {
-    const s = style === "minimal" ? "flat-square" : "for-the-badge";
-    return `![](https://img.shields.io/badge/${b}&style=${s})`;
+    const cfg = getConfig(style);
+    return `![](https://img.shields.io/badge/${b}&style=${cfg.badgeStyle})`;
   }
 
   function staticBadge(label, value, color, opts, style) {
     const esc = (s) => String(s).replace(/-/g, "--").replace(/_/g, "__").replace(/ /g, "_");
-    const s = style === "minimal" ? "flat-square" : "for-the-badge";
-    let url = `https://img.shields.io/badge/${esc(label)}-${esc(value)}-${color}?style=${s}`;
+    const cfg = getConfig(style);
+    let url = `https://img.shields.io/badge/${esc(label)}-${esc(value)}-${color}?style=${cfg.badgeStyle}`;
     if (opts && opts.logo) url += `&logo=${opts.logo}&logoColor=white`;
     return url;
   }
@@ -188,6 +188,53 @@ const ReadmeGenerator = (() => {
   }
 
   // ==================================================================
+  //  Style Configuration — config-driven approach for all 20 styles
+  // ==================================================================
+
+  const STYLE_CONFIG = {
+    classic:     { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "wave",    sectionTag: "h2", streakTheme: "github-dark-blue" },
+    minimal:     { badgeStyle: "flat-square",   centered: false, emoji: false, dividers: false, headerType: "text",    sectionTag: "h2", streakTheme: null },
+    hacker:      { badgeStyle: "for-the-badge", centered: false, emoji: false, dividers: false, headerType: "ascii",   sectionTag: "terminal", streakTheme: "dark" },
+    elegant:     { badgeStyle: "for-the-badge", centered: true,  emoji: false, dividers: true,  headerType: "capsule", sectionTag: "h2-center", streakTheme: "github-dark-blue" },
+    portfolio:   { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "capsule-portfolio", sectionTag: "h2", streakTheme: "tokyonight" },
+    futuristic:  { badgeStyle: "flat-square",   centered: true,  emoji: false, dividers: true,  headerType: "capsule-neon", sectionTag: "h2-center", streakTheme: "highcontrast" },
+    resume:      { badgeStyle: "flat-square",   centered: false, emoji: false, dividers: true,  headerType: "resume",  sectionTag: "h2", streakTheme: null },
+    gradient:    { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "capsule-gradient", sectionTag: "h2-center", streakTheme: "radical" },
+    opensource:  { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "wave-green", sectionTag: "h2", streakTheme: "merko" },
+    compact:     { badgeStyle: "flat-square",   centered: false, emoji: false, dividers: false, headerType: "text",    sectionTag: "h3", streakTheme: null },
+    animated:    { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "typing",  sectionTag: "h2-center", streakTheme: "fire" },
+    startup:     { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "capsule-startup", sectionTag: "h2", streakTheme: "react" },
+    devops:      { badgeStyle: "flat",          centered: true,  emoji: true,  dividers: true,  headerType: "capsule-devops", sectionTag: "h2", streakTheme: "algolia" },
+    mobile:      { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "capsule-mobile", sectionTag: "h2", streakTheme: "vue" },
+    aiml:        { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "capsule-ai", sectionTag: "h2-center", streakTheme: "cobalt" },
+    pastel:      { badgeStyle: "flat-square",   centered: true,  emoji: true,  dividers: true,  headerType: "capsule-pastel", sectionTag: "h2-center", streakTheme: "buefy" },
+    monochrome:  { badgeStyle: "flat-square",   centered: true,  emoji: false, dividers: true,  headerType: "text-mono", sectionTag: "h2-center", streakTheme: "dark" },
+    timeline:    { badgeStyle: "flat-square",   centered: false, emoji: true,  dividers: true,  headerType: "wave",    sectionTag: "h2", streakTheme: "github-dark-blue" },
+    badges:      { badgeStyle: "for-the-badge", centered: true,  emoji: true,  dividers: true,  headerType: "wave-badge", sectionTag: "h2", streakTheme: "gruvbox" },
+    premium:     { badgeStyle: "for-the-badge", centered: true,  emoji: false, dividers: true,  headerType: "capsule-premium", sectionTag: "h2-center", streakTheme: "onedark" },
+  };
+
+  function getConfig(style) {
+    return STYLE_CONFIG[style] || STYLE_CONFIG.classic;
+  }
+
+  function sectionHeading(title, emoji, style) {
+    const cfg = getConfig(style);
+    const prefix = cfg.emoji && emoji ? emoji + " " : "";
+    if (style === "hacker") return `# > ${title}`;
+    if (cfg.sectionTag === "h2-center") return `<h2 align="center">${prefix}${title}</h2>`;
+    if (cfg.sectionTag === "h3") return `### ${prefix}${title}`;
+    return `## ${prefix}${title}`;
+  }
+
+  function sectionStart(style) {
+    const cfg = getConfig(style);
+    const lines = [];
+    if (cfg.dividers && style !== "hacker") { lines.push(`---`); lines.push(``); }
+    return lines;
+  }
+
+  // ==================================================================
   //  Section Builders — each returns an array of markdown lines.
   //  Signature: build(data, style) => string[]
   // ==================================================================
@@ -196,13 +243,16 @@ const ReadmeGenerator = (() => {
 
     header(data, style) {
       const { user, totalStars } = data;
+      const cfg = getConfig(style);
       const username = user.login;
       const displayName = user.name || username;
       const bio = user.bio || "Passionate developer building awesome things.";
       const twitter = user.twitter_username || "";
       const lines = [];
 
-      if (style === "hacker") {
+      const headerType = cfg.headerType;
+
+      if (headerType === "ascii") {
         lines.push(`\`\`\``, `     ___  _ _   _  _       _    `);
         lines.push(`    / __|| |_| || |_ _  _| |__  `);
         lines.push(`   | (_ || |  _||   | || | '_ \\ `);
@@ -213,19 +263,105 @@ const ReadmeGenerator = (() => {
         lines.push(`## ${displayName} \`@${username}\``);
         lines.push(``);
         lines.push(`> ${bio}`);
-      } else if (style === "minimal") {
+      } else if (headerType === "text") {
         lines.push(`# ${displayName}`);
         lines.push(``);
         lines.push(`${bio}`);
         lines.push(``);
-        lines.push(`[![GitHub](https://img.shields.io/badge/-${username}-181717?style=flat-square&logo=github)](https://github.com/${username})`);
-      } else if (style === "elegant") {
+        if (style === "minimal") {
+          lines.push(`[![GitHub](https://img.shields.io/badge/-${username}-181717?style=flat-square&logo=github)](https://github.com/${username})`);
+        } else if (style === "compact") {
+          lines.push(`**@${username}** · ${user.public_repos} repos · ${totalStars} stars · ${user.followers} followers`);
+        }
+      } else if (headerType === "text-mono") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`# ${displayName}`);
+        lines.push(``);
+        lines.push(`*${bio}*`);
+        lines.push(``);
+        lines.push(`[![GitHub](https://img.shields.io/badge/GitHub-${username}-181717?style=flat-square&logo=github)](https://github.com/${username})`);
+        lines.push(``);
+      } else if (headerType === "resume") {
+        lines.push(`# ${displayName}`);
+        lines.push(`**@${username}** ${user.location ? "· " + user.location : ""} ${user.company ? "· " + user.company : ""}`);
+        lines.push(``);
+        lines.push(`${bio}`);
+        lines.push(``);
+        const links = [`[GitHub](https://github.com/${username})`];
+        if (user.blog) links.push(`[Website](https://${user.blog.replace(/^https?:\/\//, "")})`);
+        if (twitter) links.push(`[Twitter](https://twitter.com/${twitter})`);
+        if (user.email) links.push(`[${user.email}](mailto:${user.email})`);
+        lines.push(links.join(" · "));
+      } else if (headerType === "typing") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&pause=1000&color=F75C7E&center=true&vCenter=true&random=false&width=600&lines=${encodeURIComponent("Hi, I'm " + displayName + " 👋")};${encodeURIComponent(bio)};${encodeURIComponent("Welcome to my GitHub!")}" alt="Typing SVG" />`);
+        lines.push(``);
+      } else if (headerType === "capsule") {
         lines.push(`<div align="center">`);
         lines.push(``);
         lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,19,24&height=180&section=header&text=${encodeURIComponent(displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent(bio)}&descSize=16&descAlignY=52" width="100%" />`);
         lines.push(``);
+      } else if (headerType === "capsule-portfolio") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=slice&color=gradient&customColorList=2,3,12&height=200&section=header&text=${encodeURIComponent(displayName)}&fontSize=44&fontColor=fff&animation=twinkling&fontAlignY=32&desc=${encodeURIComponent("Developer Portfolio")}&descSize=18&descAlignY=55" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-neon") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=venom&color=0:0f0c29,50:302b63,100:24243e&height=200&section=header&text=${encodeURIComponent(displayName)}&fontSize=44&fontColor=00ff41&animation=fadeIn&fontAlignY=35&desc=${encodeURIComponent("// " + bio)}&descSize=14&descAlignY=58" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-gradient") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=24,25,26,27&height=200&section=header&text=${encodeURIComponent(displayName)}&fontSize=44&fontColor=fff&animation=twinkling&fontAlignY=32&desc=${encodeURIComponent(bio)}&descSize=16&descAlignY=55" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "wave-green") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=14,15,16&height=180&section=header&text=${encodeURIComponent("🌍 " + displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent("Open Source Contributor")}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-startup") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=rounded&color=gradient&customColorList=29,30,31&height=180&section=header&text=${encodeURIComponent("🚀 " + displayName)}&fontSize=42&fontColor=333&animation=fadeIn&fontAlignY=35&desc=${encodeURIComponent(bio)}&descSize=15&descAlignY=55" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-devops") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,2,3&height=180&section=header&text=${encodeURIComponent("☁️ " + displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent("DevOps & Cloud Engineer")}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-mobile") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=17,18,19&height=180&section=header&text=${encodeURIComponent("📱 " + displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent("Mobile Developer")}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-ai") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=20,21,22&height=180&section=header&text=${encodeURIComponent("🤖 " + displayName)}&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=32&desc=${encodeURIComponent("AI/ML Engineer")}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-pastel") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=soft&color=gradient&customColorList=29,30,31&height=180&section=header&text=${encodeURIComponent("✨ " + displayName + " ✨")}&fontSize=40&fontColor=555&animation=fadeIn&fontAlignY=35&desc=${encodeURIComponent(bio)}&descSize=15&descAlignY=55" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "capsule-premium") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=24,25,26&height=200&section=header&text=${encodeURIComponent(displayName)}&fontSize=46&fontColor=fff&animation=fadeIn&fontAlignY=30&desc=${encodeURIComponent("★ " + bio + " ★")}&descSize=16&descAlignY=52" width="100%" />`);
+        lines.push(``);
+      } else if (headerType === "wave-badge") {
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`# 🏅 ${displayName} 🏅`);
+        lines.push(``);
+        lines.push(`### ${bio}`);
+        lines.push(``);
       } else {
-        // classic
+        // classic / wave / default
         lines.push(`<div align="center">`);
         lines.push(``);
         lines.push(`# Hi there, I'm ${displayName} <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="30px" />`);
@@ -234,8 +370,8 @@ const ReadmeGenerator = (() => {
         lines.push(``);
       }
 
-      // Social badges (classic + elegant get centered)
-      if (style !== "hacker" && style !== "minimal") {
+      // Social badges
+      if (cfg.centered && headerType !== "ascii" && headerType !== "text" && headerType !== "resume") {
         const socialBadges = [];
         socialBadges.push(`[![GitHub followers](https://img.shields.io/github/followers/${username}?label=Follow&style=social)](https://github.com/${username})`);
         if (twitter) socialBadges.push(`[![Twitter Follow](https://img.shields.io/twitter/follow/${twitter}?style=social)](https://twitter.com/${twitter})`);
@@ -243,7 +379,7 @@ const ReadmeGenerator = (() => {
         lines.push(socialBadges.join(" &nbsp; "));
         lines.push(``);
         lines.push(`</div>`);
-      } else if (style === "hacker") {
+      } else if (headerType === "ascii") {
         lines.push(``);
         lines.push(`![Profile Views](https://komarev.com/ghpvc/?username=${username}&color=3fb950&style=flat-square&label=visitors)`);
       }
@@ -254,23 +390,13 @@ const ReadmeGenerator = (() => {
 
     about(data, style) {
       const { user, repos, totalStars } = data;
+      const cfg = getConfig(style);
       const location = user.location ? ` from ${user.location}` : "";
       const blog = user.blog || "";
       const lines = [];
 
-      if (style === "hacker") {
-        lines.push(`# > cat about.md`);
-      } else if (style === "minimal") {
-        lines.push(`## About`);
-      } else if (style === "elegant") {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`<h2 align="center">About Me</h2>`);
-      } else {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`## 🧑‍💻 About Me`);
-      }
+      lines.push(...sectionStart(style));
+      lines.push(sectionHeading("About Me", "🧑‍💻", style));
       lines.push(``);
 
       const items = [];
@@ -281,14 +407,35 @@ const ReadmeGenerator = (() => {
         items.push(`\`${user.followers}\` followers · \`${user.following}\` following`);
         if (user.company) items.push(`Working at **${user.company}**`);
         if (blog) items.push(`Blog: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
-      } else {
-        items.push(`🔭 I have **${repos.length}** public repositories on GitHub`);
+      } else if (style === "resume") {
+        if (location) items.push(`Location:${location}`);
+        items.push(`Public Repositories: **${repos.length}**`);
+        items.push(`Total Stars: **${totalStars}**`);
+        items.push(`Followers: **${user.followers}** · Following: **${user.following}**`);
+        if (user.company) items.push(`Company: **${user.company}**`);
+        if (blog) items.push(`Website: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
+      } else if (style === "compact") {
+        lines.pop(); // remove empty line
+        lines.push(`> ${repos.length} repos · ${totalStars} stars · ${user.followers} followers${location ? " ·" + location : ""}`);
+        lines.push(``);
+        return lines;
+      } else if (style === "timeline") {
+        const year = new Date(user.created_at).getFullYear();
+        items.push(`📅 **${year}** — Joined GitHub`);
+        items.push(`📦 **${repos.length}** repositories created`);
+        items.push(`⭐ **${totalStars}** stars earned`);
+        items.push(`👥 **${user.followers}** developers following`);
+        if (user.company) items.push(`🏢 Currently at **${user.company}**`);
         if (location) items.push(`🌍 Based${location}`);
-        items.push(`⭐ **${totalStars}** total stars earned across my projects`);
-        items.push(`👥 **${user.followers}** followers · **${user.following}** following`);
-        if (user.company) items.push(`🏢 Working at **${user.company}**`);
-        if (blog) items.push(`📝 Check out my blog/portfolio: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
-        if (user.hireable) items.push(`💼 Open to new opportunities!`);
+      } else {
+        const e = cfg.emoji;
+        items.push(`${e ? "🔭 " : ""}I have **${repos.length}** public repositories on GitHub`);
+        if (location) items.push(`${e ? "🌍 " : ""}Based${location}`);
+        items.push(`${e ? "⭐ " : ""}**${totalStars}** total stars earned across my projects`);
+        items.push(`${e ? "👥 " : ""}**${user.followers}** followers · **${user.following}** following`);
+        if (user.company) items.push(`${e ? "🏢 " : ""}Working at **${user.company}**`);
+        if (blog) items.push(`${e ? "📝 " : ""}Blog/portfolio: [${blog}](https://${blog.replace(/^https?:\/\//, "")})`);
+        if (user.hireable) items.push(`${e ? "💼 " : ""}Open to new opportunities!`);
       }
       for (const item of items) lines.push(`- ${item}`);
       lines.push(``);
@@ -297,22 +444,14 @@ const ReadmeGenerator = (() => {
 
     techStack(data, style) {
       const { repos, languages } = data;
+      const cfg = getConfig(style);
       const lines = [];
 
-      if (style === "hacker") {
-        lines.push(`# > ls ~/skills`);
-      } else if (style === "minimal") {
-        lines.push(`## Tech Stack`);
-      } else if (style === "elegant") {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`<h2 align="center">Tech Stack</h2>`);
-      } else {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`## 🛠️ Tech Stack`);
-      }
+      lines.push(...sectionStart(style));
+      lines.push(sectionHeading(style === "hacker" ? "ls ~/skills" : "Tech Stack", "🛠️", style));
       lines.push(``);
+
+      if (cfg.centered && style !== "hacker") lines.push(`<div align="center">`), lines.push(``);
 
       const langBadges = languages.slice(0, 12).map((l) => {
         const info = SKILL_MAP[l.name];
@@ -320,53 +459,56 @@ const ReadmeGenerator = (() => {
       }).filter(Boolean);
 
       if (langBadges.length) {
-        if (style !== "minimal" && style !== "hacker") lines.push(`### Languages`);
+        if (style !== "minimal" && style !== "hacker" && style !== "compact") lines.push(`### Languages`);
         lines.push(langBadges.join(" "));
         lines.push(``);
       }
 
       const toolBadges = inferTools(repos);
       if (toolBadges.length) {
-        if (style !== "minimal" && style !== "hacker") lines.push(`### Frameworks & Tools`);
+        if (style !== "minimal" && style !== "hacker" && style !== "compact") lines.push(`### Frameworks & Tools`);
         lines.push(toolBadges.map((b) => badge(b, style)).join(" "));
         lines.push(``);
       }
+
+      if (cfg.centered && style !== "hacker") lines.push(`</div>`), lines.push(``);
       return lines;
     },
 
     topProjects(data, style) {
       const { topRepos } = data;
       if (!topRepos.length) return [];
+      const cfg = getConfig(style);
       const lines = [];
 
-      if (style === "hacker") {
-        lines.push(`# > ls ~/top-projects --sort=stars`);
-      } else if (style === "minimal") {
-        lines.push(`## Top Projects`);
-      } else if (style === "elegant") {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`<h2 align="center">Top Projects</h2>`);
-      } else {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`## 🚀 Top Projects`);
-      }
+      lines.push(...sectionStart(style));
+      lines.push(sectionHeading(style === "hacker" ? "ls ~/top-projects --sort=stars" : "Top Projects", "🚀", style));
       lines.push(``);
-      lines.push(`| Project | Description | Stars | Language |`);
-      lines.push(`|---------|-------------|-------|----------|`);
 
-      for (const repo of topRepos) {
-        const desc = (repo.description || "—").replace(/\|/g, "\\|");
-        const lang = repo.language || "—";
-        lines.push(`| [**${repo.name}**](${repo.html_url}) | ${desc} | ⭐ ${repo.stargazers_count} | ${lang} |`);
+      if (style === "badges") {
+        // Badge-heavy: show each project as a badge
+        for (const repo of topRepos) {
+          const lang = repo.language || "Code";
+          const color = (LANG_COLORS[repo.language] || "#8b949e").replace("#", "");
+          lines.push(`[![${repo.name}](https://img.shields.io/badge/${encodeURIComponent(repo.name)}-⭐_${repo.stargazers_count}-${color}?style=for-the-badge&logo=github)](${repo.html_url})`);
+        }
+        lines.push(``);
+      } else {
+        lines.push(`| Project | Description | Stars | Language |`);
+        lines.push(`|---------|-------------|-------|----------|`);
+        for (const repo of topRepos) {
+          const desc = (repo.description || "—").replace(/\|/g, "\\|");
+          const lang = repo.language || "—";
+          lines.push(`| [**${repo.name}**](${repo.html_url}) | ${desc} | ⭐ ${repo.stargazers_count} | ${lang} |`);
+        }
+        lines.push(``);
       }
-      lines.push(``);
       return lines;
     },
 
     stats(data, style) {
       const { user, repos, totalStars } = data;
+      const cfg = getConfig(style);
       const extra = computeExtraStats(repos);
       const lines = [];
 
@@ -380,24 +522,16 @@ const ReadmeGenerator = (() => {
         lines.push(`| Followers | \`${user.followers}\` |`);
         lines.push(`| Total Forks | \`${extra.totalForks}\` |`);
         lines.push(``);
-      } else if (style === "minimal") {
-        lines.push(`## Stats`);
+      } else if (style === "minimal" || style === "compact") {
+        lines.push(sectionHeading("Stats", "📊", style));
         lines.push(``);
         lines.push(`**${totalStars}** stars · **${extra.originalRepos}** repos · **${user.followers}** followers · **${extra.totalForks}** forks`);
         lines.push(``);
       } else {
-        if (style === "elegant") {
-          lines.push(`---`);
-          lines.push(``);
-          lines.push(`<h2 align="center">GitHub Stats</h2>`);
-        } else {
-          lines.push(`---`);
-          lines.push(``);
-          lines.push(`## 📊 GitHub Stats`);
-        }
+        lines.push(...sectionStart(style));
+        lines.push(sectionHeading("GitHub Stats", "📊", style));
         lines.push(``);
-        lines.push(`<div align="center">`);
-        lines.push(``);
+        if (cfg.centered) lines.push(`<div align="center">`), lines.push(``);
         lines.push(
           `![](${staticBadge("Total Stars", totalStars, "58a6ff", { logo: "github" }, style)}) ` +
           `![](${staticBadge("Repositories", extra.originalRepos, "3fb950", { logo: "bookmarks" }, style)}) ` +
@@ -405,8 +539,7 @@ const ReadmeGenerator = (() => {
           `![](${staticBadge("Forks", extra.totalForks, "d29922", { logo: "git" }, style)})`
         );
         lines.push(``);
-        lines.push(`</div>`);
-        lines.push(``);
+        if (cfg.centered) lines.push(`</div>`), lines.push(``);
       }
       return lines;
     },
@@ -414,6 +547,7 @@ const ReadmeGenerator = (() => {
     languages(data, style) {
       const topLangs = data.languages.slice(0, 8);
       if (!topLangs.length) return [];
+      const cfg = getConfig(style);
       const lines = [];
 
       if (style === "hacker") {
@@ -424,42 +558,39 @@ const ReadmeGenerator = (() => {
           lines.push(`\`${l.name.padEnd(14)} ${bar} ${l.pct}%\``);
         }
         lines.push(``);
-      } else if (style === "minimal") {
-        // skip — minimal keeps it brief
+      } else if (style === "minimal" || style === "compact") {
         return [];
       } else {
-        lines.push(`<div align="center">`);
+        lines.push(...sectionStart(style));
+        lines.push(sectionHeading("Top Languages", "💬", style));
         lines.push(``);
+        if (cfg.centered) lines.push(`<div align="center">`), lines.push(``);
         lines.push(topLangs.map((l) => {
           const c = (LANG_COLORS[l.name] || "#8b949e").replace("#", "");
           return `![](${staticBadge(l.name, l.pct + "%", c, null, style)})`;
         }).join(" "));
         lines.push(``);
-        lines.push(`</div>`);
-        lines.push(``);
+        if (cfg.centered) lines.push(`</div>`), lines.push(``);
       }
       return lines;
     },
 
     streak(data, style) {
       const username = data.user.login;
+      const cfg = getConfig(style);
       const lines = [];
-      const theme = style === "hacker" ? "dark" : "github-dark-blue";
 
-      if (style === "minimal") return [];
+      if (!cfg.streakTheme) return [];
 
-      if (style === "elegant") {
-        lines.push(`<div align="center">`);
-        lines.push(``);
-      } else if (style !== "hacker") {
+      if (cfg.centered && style !== "hacker") {
         lines.push(`<div align="center">`);
         lines.push(``);
       }
 
-      lines.push(`<img src="https://streak-stats.demolab.com/?user=${username}&theme=${theme}&hide_border=true" alt="GitHub Streak" />`);
+      lines.push(`<img src="https://streak-stats.demolab.com/?user=${username}&theme=${cfg.streakTheme}&hide_border=true" alt="GitHub Streak" />`);
       lines.push(``);
 
-      if (style !== "hacker") {
+      if (cfg.centered && style !== "hacker") {
         lines.push(`</div>`);
         lines.push(``);
       }
@@ -469,20 +600,16 @@ const ReadmeGenerator = (() => {
     trophies(data, style) {
       const trophies = generateTrophies(data);
       if (!trophies.length) return [];
+      const cfg = getConfig(style);
       const lines = [];
 
-      if (style === "minimal") return [];
+      if (style === "minimal" || style === "compact") return [];
 
+      lines.push(...sectionStart(style));
       if (style === "hacker") {
         lines.push(`# > cat ~/.achievements`);
-      } else if (style === "elegant") {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`<h2 align="center">Achievements</h2>`);
       } else {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`## 🏆 GitHub Trophies`);
+        lines.push(sectionHeading("GitHub Trophies", "🏆", style));
       }
       lines.push(``);
 
@@ -492,20 +619,19 @@ const ReadmeGenerator = (() => {
         }
         lines.push(``);
       } else {
-        lines.push(`<div align="center">`);
-        lines.push(``);
+        if (cfg.centered) lines.push(`<div align="center">`), lines.push(``);
         lines.push(trophies.map((t) =>
           `![](${staticBadge(t.icon + " " + t.label, t.value, t.color, null, style)})`
         ).join(" "));
         lines.push(``);
-        lines.push(`</div>`);
-        lines.push(``);
+        if (cfg.centered) lines.push(`</div>`), lines.push(``);
       }
       return lines;
     },
 
     connect(data, style) {
       const { user } = data;
+      const cfg = getConfig(style);
       const username = user.login;
       const twitter = user.twitter_username || "";
       const blog = user.blog || "";
@@ -520,62 +646,62 @@ const ReadmeGenerator = (() => {
         if (user.email) lines.push(`- Email: [\`${user.email}\`](mailto:${user.email})`);
         lines.push(``);
       } else {
-        if (style === "elegant") {
-          lines.push(`---`);
-          lines.push(``);
-          lines.push(`<h2 align="center">Connect with Me</h2>`);
-        } else if (style === "minimal") {
-          lines.push(`## Connect`);
-        } else {
-          lines.push(`---`);
-          lines.push(``);
-          lines.push(`## 📫 Connect with Me`);
-        }
+        lines.push(...sectionStart(style));
+        lines.push(sectionHeading("Connect with Me", "📫", style));
         lines.push(``);
-        const bs = style === "minimal" ? "flat-square" : "for-the-badge";
+
+        if (cfg.centered) lines.push(`<div align="center">`), lines.push(``);
         const connectBadges = [];
-        connectBadges.push(`[![GitHub](https://img.shields.io/badge/GitHub-181717?style=${bs}&logo=github&logoColor=white)](https://github.com/${username})`);
-        if (twitter) connectBadges.push(`[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=${bs}&logo=twitter&logoColor=white)](https://twitter.com/${twitter})`);
-        if (blog) connectBadges.push(`[![Website](https://img.shields.io/badge/Website-4285F4?style=${bs}&logo=googlechrome&logoColor=white)](https://${blog.replace(/^https?:\/\//, "")})`);
-        if (user.email) connectBadges.push(`[![Email](https://img.shields.io/badge/Email-D14836?style=${bs}&logo=gmail&logoColor=white)](mailto:${user.email})`);
+        connectBadges.push(`[![GitHub](https://img.shields.io/badge/GitHub-181717?style=${cfg.badgeStyle}&logo=github&logoColor=white)](https://github.com/${username})`);
+        if (twitter) connectBadges.push(`[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=${cfg.badgeStyle}&logo=twitter&logoColor=white)](https://twitter.com/${twitter})`);
+        if (blog) connectBadges.push(`[![Website](https://img.shields.io/badge/Website-4285F4?style=${cfg.badgeStyle}&logo=googlechrome&logoColor=white)](https://${blog.replace(/^https?:\/\//, "")})`);
+        if (user.email) connectBadges.push(`[![Email](https://img.shields.io/badge/Email-D14836?style=${cfg.badgeStyle}&logo=gmail&logoColor=white)](mailto:${user.email})`);
         lines.push(connectBadges.join(" "));
         lines.push(``);
+        if (cfg.centered) lines.push(`</div>`), lines.push(``);
       }
       return lines;
     },
 
     footer(data, style) {
+      const cfg = getConfig(style);
       const lines = [];
+      lines.push(`---`);
+      lines.push(``);
+
       if (style === "hacker") {
-        lines.push(`---`);
-        lines.push(``);
         lines.push(`\`\`\``);
         lines.push(`$ echo "Thanks for visiting! Star my repos if you find them useful."`);
         lines.push(`\`\`\``);
-      } else if (style === "minimal") {
-        lines.push(`---`);
-        lines.push(``);
+      } else if (style === "minimal" || style === "compact") {
         lines.push(`*Star my repos if you find them useful!*`);
-      } else if (style === "elegant") {
-        lines.push(`---`);
-        lines.push(``);
+      } else if (style === "resume") {
+        lines.push(`*References and additional details available upon request.*`);
+      } else if (style === "pastel") {
         lines.push(`<div align="center">`);
         lines.push(``);
-        lines.push(`*Thank you for visiting!*`);
+        lines.push(`*Thank you for visiting! Have a wonderful day!* ✨🌸`);
         lines.push(``);
-        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,19,24&height=80&section=footer" width="100%" />`);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=soft&color=gradient&customColorList=29,30,31&height=80&section=footer" width="100%" />`);
+        lines.push(``);
+        lines.push(`</div>`);
+      } else if (cfg.centered) {
+        const footerColors = {
+          classic: "6,12,19", elegant: "12,19,24", portfolio: "2,3,12", futuristic: "0,1,2",
+          gradient: "24,25,26", opensource: "14,15,16", animated: "8,9,10", startup: "29,30,31",
+          devops: "0,2,3", mobile: "17,18,19", aiml: "20,21,22", monochrome: "0,1,2",
+          timeline: "6,12,19", badges: "8,9,10", premium: "24,25,26",
+        };
+        const colorList = footerColors[style] || "6,12,19";
+        lines.push(`<div align="center">`);
+        lines.push(``);
+        lines.push(`**${cfg.emoji ? "⭐ " : ""}Star my repos if you find them useful!${cfg.emoji ? " ⭐" : ""}**`);
+        lines.push(``);
+        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=${colorList}&height=80&section=footer" width="100%" />`);
         lines.push(``);
         lines.push(`</div>`);
       } else {
-        lines.push(`---`);
-        lines.push(``);
-        lines.push(`<div align="center">`);
-        lines.push(``);
-        lines.push(`**⭐ Star my repos if you find them useful!**`);
-        lines.push(``);
-        lines.push(`<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,12,19&height=80&section=footer" width="100%" />`);
-        lines.push(``);
-        lines.push(`</div>`);
+        lines.push(`*Star my repos if you find them useful!*`);
       }
       return lines;
     },
