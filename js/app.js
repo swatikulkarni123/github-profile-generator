@@ -54,6 +54,14 @@
   let currentStyle = "classic";
   let sectionOrder = [...ReadmeGenerator.DEFAULT_ORDER];
 
+  // ---- Generation counter (localStorage) ----
+  const genCounter = document.getElementById("generation-counter");
+  let genCount = parseInt(localStorage.getItem("genCount") || "0", 10);
+  function updateGenCounter() {
+    if (genCounter) genCounter.textContent = `${genCount} READMEs generated`;
+  }
+  updateGenCounter();
+
   // ---- Auto-focus input on page load ----
   usernameInput.focus();
 
@@ -200,6 +208,10 @@
 
       resultsSection.hidden = false;
       resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      genCount++;
+      localStorage.setItem("genCount", String(genCount));
+      updateGenCounter();
     } catch (err) {
       showError(err.message);
     } finally {
